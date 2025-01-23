@@ -57,27 +57,18 @@ const DictionaryEditor = () => {
   const [newEntry, setNewEntry] = useState({
     phrase: '',
     soundsLike: '',
-    ipa: '',
+    id: '',
     displayAs: ''
   });
 
 
   const loadDictionary = async () => {
-    debugger;
     setIsLoading(true);
     setIsEditing(true);
 
     try {
       var resDic = await getDictionary();
-
-      console.log('Response:', resDic);
-
-      if (resDic?.length) {
-        setEntries(resDic);
-      }
-      //  else {
-      //   setError('No items found in table');
-      // }
+      setEntries(resDic);
     } catch (error) {
       console.error('Error:', error);
       setError('שגיאה בטעינת המילון');
@@ -88,9 +79,9 @@ const DictionaryEditor = () => {
   const saveDictionary = async () => {
     setIsSaving(true);
     try {
-    
+
       var res = await UploadDictionary("testtranscriberapp", entries);
-      if(res===true){
+      if (res === true) {
         loadDictionary();
       }
       // setIsEditing(false);
@@ -102,27 +93,21 @@ const DictionaryEditor = () => {
   };
 
   const deleteEntry = async (index) => {
-    const entry = entries[index];
-    try {
-      console.log('Deleting entry:', entry);
+    const entryToDelete = filteredAndSortedEntries[index]; // הפריט מהרשימה המסוננת והממוינת
+    const originalIndex = entries.findIndex(entry => entry.Phrase === entryToDelete.Phrase); // מוצאים את האינדקס ברשימה המקורית
 
-      // await docClient.send(new DeleteCommand({
-      //   TableName: "transcriber-medical",
-      //   Key: {
-      //     Phrase: entry.Phrase,
-      //     DisplayAs: entry.DisplayAs  // Adding composite key if needed
-      //   }
-      // }));
-
-      const newEntries = [...entries];
-      newEntries.splice(index, 1);
-      setEntries(newEntries);
-    } catch (error) {
-      console.error('Delete request details:', {
-        key: entry
-      });
-      console.error('Error:', error);
-      setError('שגיאה במחיקת רשומה');
+    if (originalIndex !== -1) {
+      try {
+        console.log('Deleting entry:', entryToDelete);
+        const newEntries = [...entries];
+        newEntries.splice(originalIndex, 1); // מחיקת הפריט לפי האינדקס המקורי
+        setEntries(newEntries);
+      } catch (error) {
+        console.error('Error:', error);
+        setError('שגיאה במחיקת רשומה');
+      }
+    } else {
+      console.error('Entry not found in original list');
     }
   };
 
@@ -148,7 +133,6 @@ const DictionaryEditor = () => {
 
     if (sortConfig.key) {
       result.sort((a, b) => {
-        debugger;
         if (a[sortConfig.key] < b[sortConfig.key]) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -171,7 +155,7 @@ const DictionaryEditor = () => {
         const item = {
           Phrase: newEntry.Phrase,
           SoundsLike: newEntry.SoundsLike || '',
-          IPA: newEntry.Ipa || '',
+          id: newEntry.id || '',
           DisplayAs: newEntry.DisplayAs
         };
 
@@ -179,7 +163,7 @@ const DictionaryEditor = () => {
         setNewEntry({
           Phrase: '',
           SoundsLike: '',
-          Ipa: '',
+          id: '',
           DisplayAs: ''
         });
         setAddLine(false);
@@ -191,7 +175,7 @@ const DictionaryEditor = () => {
   };
 
   const onCloseModal = async () => {
-    setNewEntry({ Phrase: '', SoundsLike: '', Ipa: '', DisplayAs: '' });
+    setNewEntry({ Phrase: '', SoundsLike: '', id: '', DisplayAs: '' });
     setAddLine(false);
     setIsEditing(false);
     setError(false);
@@ -202,20 +186,12 @@ const DictionaryEditor = () => {
       {!isEditing ? (
         <button
           onClick={loadDictionary}
-          disabled={isLoading}
           className="btn-secondary w-full"
         >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <LoadingSpinner />
-              טוען...
-            </span>
-          ) : (
-            <div className="flex items-center flex-row-reverse gap-10">
-              <span>עריכת מילון</span>
-              <img src='/edit.svg' alt='✏️' />
-            </div>
-          )}
+          <div className="flex items-center flex-row-reverse gap-10">
+            <span>עריכת מילון</span>
+            <img src='/edit.svg' alt='✏️' />
+          </div>
         </button>
       ) : (
         <div dir="rtl" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -241,11 +217,12 @@ const DictionaryEditor = () => {
             <div className="flex gap-4 mb-4">
               <button
                 onClick={addNewLine}
-                disabled={false}
+                disabled={error!=''}
                 // className="px-4 py-2 bg-[#007e41]text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 className='p-2 bg-[#007e41] text-white rounded-md hover:bg-[#007e4191] disabled:opacity-50 '
               >
-                הוסף רשומה
+                <span>הוספה</span>
+
               </button>
               <div className="flex-1 relative">
                 <input
@@ -257,13 +234,7 @@ const DictionaryEditor = () => {
                   dir="rtl"
                 />
               </div>
-              <button
-                onClick={saveDictionary}
-                disabled={isSaving}
-                className='p-2 bg-[#007e41] text-white rounded-md hover:bg-[#007e4191] disabled:opacity-50 '
-              >
-                {isSaving ? 'שומר...' : 'שמירה'}
-              </button>
+
             </div>
 
             {/* <div className="flex gap-2 mb-4">
@@ -285,9 +256,9 @@ const DictionaryEditor = () => {
               />
               <input
                 type="text"
-                placeholder="IPA"
-                value={newEntry.Ipa}
-                onChange={(e) => setNewEntry({ ...newEntry, Ipa: e.target.value })}
+                placeholder="id"
+                value={newEntry.id}
+                onChange={(e) => setNewEntry({ ...newEntry, id: e.target.value })}
                 className="flex-1 px-4 py-2 border rounded-md"
               />
               <input
@@ -315,34 +286,17 @@ const DictionaryEditor = () => {
                         className="flex items-center   w-full hover:text-gray-800 transition-colors"
                         onClick={() => handleSort("Phrase")}
                       >
-                        תיקון
+                        ערך שגוי
                         <SortIcon className="mr-2" />
                       </button>
                     </th>
-                    <th className="text-right p-3 border-b-2 font-medium text-gray-600">
-                      <button
-                        className="flex items-center   w-full hover:text-gray-800 transition-colors"
-                        onClick={() => handleSort("SoundsLike")}
-                      >
-                        נשמע כמו
-                        <SortIcon className="mr-2" />
-                      </button>
-                    </th>
-                    <th className="text-right p-3 border-b-2 font-medium text-gray-600">
-                      <button
-                        className="flex items-center   w-full hover:text-gray-800 transition-colors"
-                        onClick={() => handleSort("Ipa")}
-                      >
-                        IPA
-                        <SortIcon className="mr-2" />
-                      </button>
-                    </th>
+
                     <th className="text-right p-3 border-b-2 font-medium text-gray-600">
                       <button dir='rtl'
                         className="flex items-center   w-full hover:text-gray-800 transition-colors"
                         onClick={() => handleSort("DisplayAs")}
                       >
-                        להציג בתור
+                        ערך מתוקן
                         <SortIcon className="mr-2" />
                       </button>
                     </th>
@@ -355,36 +309,18 @@ const DictionaryEditor = () => {
                       <td className="text-right p-3 border-b text-gray-700" dir="rtl">
                         <input
                           type="text"
-                          placeholder="תיקון"
+                          placeholder="ערך שגוי"
                           value={newEntry.Phrase}
                           onChange={(e) => setNewEntry({ ...newEntry, Phrase: e.target.value })}
                           className="flex-1 px-4 py-2 border rounded-md text-right"
                           dir="rtl"
                         />
                       </td>
+
                       <td className="text-right p-3 border-b text-gray-700" dir="rtl">
                         <input
                           type="text"
-                          placeholder="נשמע כמו"
-                          value={newEntry.SoundsLike}
-                          onChange={(e) => setNewEntry({ ...newEntry, SoundsLike: e.target.value })}
-                          className="flex-1 px-4 py-2 border rounded-md text-right"
-                          dir="rtl"
-                        />
-                      </td>
-                      <td className="text-right p-3 border-b text-gray-700" dir="rtl">
-                        <input
-                          type="text"
-                          placeholder="IPA"
-                          value={newEntry.Ipa}
-                          onChange={(e) => setNewEntry({ ...newEntry, Ipa: e.target.value })}
-                          className="flex-1 px-4 py-2 border rounded-md"
-                        />
-                      </td>
-                      <td className="text-right p-3 border-b text-gray-700" dir="rtl">
-                        <input
-                          type="text"
-                          placeholder="להציג בתור"
+                          placeholder="ערך מתוקן"
                           value={newEntry.DisplayAs}
                           onChange={(e) => setNewEntry({ ...newEntry, DisplayAs: e.target.value })}
                           className="flex-1 px-4 py-2 border rounded-md text-right"
@@ -413,12 +349,7 @@ const DictionaryEditor = () => {
                       <td className="text-right p-3 border-b text-gray-700" dir="rtl">
                         {entry.Phrase}
                       </td>
-                      <td className="text-right p-3 border-b text-gray-700" dir="rtl">
-                        {entry.SoundsLike || ""}
-                      </td>
-                      <td className="text-left p-3 border-b text-gray-700">
-                        {entry.IPA || ""}
-                      </td>
+
                       <td className="text-right p-3 border-b text-gray-700" dir="rtl">
                         {entry.DisplayAs}
                       </td>
@@ -437,7 +368,24 @@ const DictionaryEditor = () => {
                 </tbody>
               </table>
 
+            </div>
+            <div
+              style={{ marginTop: "15px" }}
+            >
+              <div
+                //  className="fixed bottom-4 left-4 z-50"
+                style={{ display: "flex", justifyContent: "flex-start", alignItems: "center" }}
+              >
+                <button
+                  onClick={saveDictionary}
+                  disabled={error!=''}
+                  className="p-3 bg-[#007e41] text-white rounded-md hover:bg-[#007e4191] disabled:opacity-50 shadow-lg"
+                  style={{ marginRight: "auto" }}
 
+                >
+                  {isSaving ? "שומר..." : "שמירה"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import axios from "axios";
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const BASE_URL = 'http://98.80.128.151:8000/api/v1/'
 // const BASE_URL='https://98.80.128.151:8443/api/'
@@ -101,6 +102,8 @@ export const summarize = async (bucketName, fileKey = "", text = "") => {
 };
 
 export const cleanTranscribe = async (bucketName, transcription,fileName="", filePath="") => {
+    await delay(10000);
+
     var url = "";
     try {
        

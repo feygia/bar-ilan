@@ -13,6 +13,7 @@ const MedicalTranscription = () => {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isRecording, setIsRecording] = useState(false)
   const [transcription, setTranscription] = useState('')
+  const [transcriptionCopy, setTranscriptionCopy] = useState('')
   const [error, setError] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
@@ -37,8 +38,10 @@ const MedicalTranscription = () => {
   const [isProcessingAI, setIsProcessingAI] = useState(false)
 
   const [numSpeakers, setNumSpeakers] = useState(2)
-  const [language, setLanguage] = useState('auto')
+  const [language, setLanguage] = useState('he-IL')
   const [isLoading, setIsLoading] = useState(false);
+
+
 
   const BUCKET_NAME = 'testtranscriberapp'
   const END_DIR_FOLDER = 'ai-summarize/'
@@ -50,11 +53,14 @@ const MedicalTranscription = () => {
 
 
   useEffect(() => {
+   
     if (error !== '') {
       console.log("line - 54");
       setIsLoading(false); // אם יש שגיאה, הפסיקי את הטעינה
     }
   }, [error]);
+
+ 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
@@ -66,6 +72,7 @@ const MedicalTranscription = () => {
 
     try {
       // setIsProcessingAI(true)
+      setIsLoading(true);
 
       // Create a progress handler
       const handleProgress = progressText => {
@@ -73,9 +80,9 @@ const MedicalTranscription = () => {
       }
       const cleanText = await cleanTranscribe(BUCKET_NAME, transcription)
       setTranscription(cleanText)
+      setIsLoading(false);
 
-      openModal()
-      //  await aiAgentClean(sessionId, handleProgress)
+      //openModal()
     } catch (error) {
       console.error('Error cleaning text:', error)
       setError('שגיאה בניקוי הטקסט')
@@ -124,12 +131,14 @@ const MedicalTranscription = () => {
   }
   const setContentFile = async (file) => {
     try {
+
       if (file) {
         const reader = new FileReader();
         // פונקציה שתרוץ כשהקריאה של הקובץ הושלמה
         reader.onload = () => {
           // setFileContent(reader.result); // גישה לתוכן הקובץ
           setTranscription(reader.result); // גישה לתוכן הקובץ
+          setTranscriptionCopy(reader.result);
         };
         // קריאה של תוכן הקובץ כטקסט
         reader.readAsText(file)
@@ -143,6 +152,7 @@ const MedicalTranscription = () => {
     }
   };
   const handleFileSelect = async event => {
+    setIsLoading(true);
     setTranscription('');
     const file = event.target.files[0]
     if (!file) return
@@ -188,6 +198,8 @@ const MedicalTranscription = () => {
     setSelectedFileName('');
     setError('')
     if (file.type === 'text/plain') {
+
+
       await setContentFile(file)
       console.log("line - 192");
       setIsLoading(false);
@@ -200,7 +212,6 @@ const MedicalTranscription = () => {
       try {
         const newSessionId = createSessionId()
         setSessionId(newSessionId)
-        setIsLoading(true);
         setAudioUrl(null);
 
 
@@ -223,6 +234,8 @@ const MedicalTranscription = () => {
             const response = await getFile(BUCKET_NAME, TRANSCRIPTION_FOLDER + res + '.json')
             if (response) {
               setTranscription(response);
+              setTranscriptionCopy(response)
+
             }
           }
         }
@@ -449,8 +462,8 @@ const MedicalTranscription = () => {
       <div className='w-full h-[100px] bg-[#014127]'>
         <img src='/logo.svg' alt='logo' className='h-[100%] ml-auto' />
       </div>
+      <div className='mx-auto max-w-[1000px] rounded-xl px-8 py-6 w-full '>
 
-      <div className='mx-auto max-w-[1000px] rounded-xl px-8 py-6'>
         <div className='flex justify-end items-center pb-4 mb-6'>
           <h1 className='text-2xl md:text-3xl text-[#006937] font-bold text-right font-assistant'>
             מערכת תמלול חכמה
@@ -483,6 +496,10 @@ const MedicalTranscription = () => {
         />
 
         <div className='grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#0069361e] rounded-lg mb-2'>
+          <button onClick={clearTranscription} className='btn-primary'>
+            <span className='ml-6'>רענון מסך</span>
+            {/* <img src='/new.svg' alt='➕' /> */}
+          </button>
           <button
             onClick={stopRecording}
             disabled={!isRecording}
@@ -517,15 +534,12 @@ const MedicalTranscription = () => {
                 ...מתחיל
               </span>
             ) : (
-              <span className='ml-6'>התחל הקלטה</span>
+              <span className='ml-6'>התחלת הקלטה</span>
             )}
             {!isProcessing && <img src='/play.svg' alt='▶️' />}
           </button>
 
-          <button onClick={clearTranscription} className='btn-primary'>
-            <span className='ml-6'>תמלול חדש</span>
-            <img src='/new.svg' alt='➕' />
-          </button>
+
           <div className='relative'>
             <input
               type='file'
@@ -595,42 +609,7 @@ const MedicalTranscription = () => {
         )}
 
         {/* AI Processing Controls */}
-        <div className='flex flex-row flex-wrap items-center justify-center gap-6 bg-[#00693609] rounded-md mb-20'>
-          <button
-            onClick={handleCleanText}
-            disabled={!transcription || isProcessingAI}
-            className={`btn-secondary ${!transcription || isProcessingAI
-              ? 'opacity-50 cursor-not-allowed'
-              : ''
-              }`}
-          >
-            {isProcessingAI ? (
-              <span className='flex items-center justify-center'>
-                <svg className='animate-spin h-5 w-5 mr-3' viewBox='0 0 24 24'>
-                  <circle
-                    className='opacity-25'
-                    cx='12'
-                    cy='12'
-                    r='10'
-                    stroke='currentColor'
-                    strokeWidth='4'
-                    fill='none'
-                  />
-                  <path
-                    className='opacity-75'
-                    fill='currentColor'
-                    d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
-                  />
-                </svg>
-                מעבד...
-              </span>
-            ) : (
-              <div className='flex items-center flex-row-reverse gap-10'>
-                <span>טיוב טקסט</span>
-                <img src={iconWand} alt="wand" />
-              </div>
-            )}
-          </button>
+        <div className='flex flex-row flex-wrap items-center justify-center gap-6 bg-[#00693609] rounded-md mb-5'>
           <button
             onClick={handleAISummary}
             disabled={!transcription || isProcessingAI}
@@ -666,16 +645,53 @@ const MedicalTranscription = () => {
               </div>
             )}
           </button>
+          <button
+            onClick={handleCleanText}
+            disabled={!transcription || isProcessingAI}
+            className={`btn-secondary ${!transcription || isProcessingAI
+              ? 'opacity-50 cursor-not-allowed'
+              : ''
+              }`}
+          >
+            {isProcessingAI ? (
+              <span className='flex items-center justify-center'>
+                <svg className='animate-spin h-5 w-5 mr-3' viewBox='0 0 24 24'>
+                  <circle
+                    className='opacity-25'
+                    cx='12'
+                    cy='12'
+                    r='10'
+                    stroke='currentColor'
+                    strokeWidth='4'
+                    fill='none'
+                  />
+                  <path
+                    className='opacity-75'
+                    fill='currentColor'
+                    d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                  />
+                </svg>
+                מעבד...
+              </span>
+            ) : (
+              <div className='flex items-center flex-row-reverse gap-10'>
+                <span>טיוב טקסט</span>
+                <img src={iconWand} alt="wand" />
+              </div>
+            )}
+          </button>
+
           <DictionaryEditor />
         </div>
 
-        <div className='space-y-4'>
-          <TextDisplay
-            text={transcription}
-            sessionId={sessionId}
-            direction={language === 'he-IL' || language === 'ar-AE' ? 'rtl' : 'ltr'}
-          />
-        </div>
+        {/* <div className='space-y-4'> */}
+        <TextDisplay
+          text={transcription}
+          sessionId={sessionId}
+          direction={language === 'he-IL' || language === 'ar-AE' ? 'rtl' : 'ltr'}
+          textCopy={transcriptionCopy}
+        />
+        {/* </div> */}
         {/* <Modal
           isOpen={isModalOpen}
           onClose={closeModal}

@@ -1,7 +1,9 @@
 import React from 'react';
 import {useTextDisplay} from "./useTextDisplay";
+import { RotateCcw } from "lucide-react";
 
-const TextDisplay = ({ text, sessionId, direction }) => {
+
+const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
   const {
       copied,
       handleCopy,
@@ -47,7 +49,7 @@ const TextDisplay = ({ text, sessionId, direction }) => {
             ) : (
               <span className="flex items-center gap-1">
                 <img src='/copy.svg' alt='copy' className='w-[15px] mr-2'/>
-                העתק
+                העתקה
               </span>
             )}
           </button>
@@ -60,6 +62,16 @@ const TextDisplay = ({ text, sessionId, direction }) => {
             disabled={currentText ===''}
           >
             הורדה
+          </button>
+          <button 
+            onClick={() => {
+            setCurrentText(textCopy)
+            }}
+            className={baseClasses}
+            disabled={currentText ===''}
+          >
+            שחזור תמלול מקורי
+
           </button>
 {/*
           <button
@@ -79,7 +91,7 @@ const TextDisplay = ({ text, sessionId, direction }) => {
         </div>
       </div>
 
-      <div className="group relative h-64 w-full overflow-hidden" style={{ resize: 'vertical' }}>
+      <div className="group relative h-[45vh] w-full overflow-hidden" style={{ resize: 'vertical' }}>
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-20">
               <img src='/loader.gif' alt='loader' className='w-32'/>
