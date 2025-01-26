@@ -1,15 +1,11 @@
 {
-   "BaseUrl":"http://98.80.128.151:8000/api/v1/",
-    "bucketName":"testtranscriberapp",
-    "EndDirFolder":"ai-summarize/",
-    "CleanFolder":"cleaned/",
-    "MediaLoadFolder":"media-loads/",
-    "SummarizeFolder":"summarize/",
-    "DictionaryFolder":"dictionaries/",
-    "TranscriptionFolder":"transcriptions/"
-
-    
-  }
-
-
-  
+  "BaseUrl": "http://98.80.128.151:8000/api/v1/",
+  "_commentBaseUrl": "https://98.80.128.151:8443/api/",
+  "bucketName": "testtranscriberapp",
+  "EndDirFolder": "ai-summarize/",
+  "CleanFolder": "cleaned/",
+  "MediaLoadFolder": "media-loads/",
+  "SummarizeFolder": "summarize/",
+  "DictionaryFolder": "dictionaries/",
+  "TranscriptionFolder": "transcriptions/"
+}
