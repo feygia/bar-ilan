@@ -46,13 +46,14 @@ const SaveIcon = () => (
 );
 
 const DictionaryEditor = () => {
-  const [isEditing, setIsEditing] = useState(false);
+ const [isEditing, setIsEditing] = useState(false);
   const [entries, setEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [addLine, setAddLine] = useState(false);
+  const [counter, setCounter] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [newEntry, setNewEntry] = useState({
     phrase: '',
@@ -64,8 +65,8 @@ const DictionaryEditor = () => {
 
   const loadDictionary = async () => {
     setIsLoading(true);
-    setIsEditing(true);
-
+   setIsEditing(true);
+    setCounter(0);
     try {
       var resDic = await getDictionary();
       setEntries(resDic);
@@ -84,12 +85,12 @@ const DictionaryEditor = () => {
       if (res === true) {
         loadDictionary();
       }
-      // setIsEditing(false);
+      //setIsEditing(false);
+      setIsSaving(false);
     } catch (error) {
       console.error('Error:', error);
       setError('שגיאה בשמירת המילון');
     }
-    setIsSaving(false);
   };
 
   const deleteEntry = async (index) => {
@@ -102,6 +103,7 @@ const DictionaryEditor = () => {
         const newEntries = [...entries];
         newEntries.splice(originalIndex, 1); // מחיקת הפריט לפי האינדקס המקורי
         setEntries(newEntries);
+        setCounter(counter + 1);
       } catch (error) {
         console.error('Error:', error);
         setError('שגיאה במחיקת רשומה');
@@ -167,6 +169,7 @@ const DictionaryEditor = () => {
           DisplayAs: ''
         });
         setAddLine(false);
+        setCounter(counter + 1);
       } catch (error) {
         console.error('Error:', error);
         setError('שגיאה בהוספת רשומה');
@@ -177,7 +180,7 @@ const DictionaryEditor = () => {
   const onCloseModal = async () => {
     setNewEntry({ Phrase: '', SoundsLike: '', id: '', DisplayAs: '' });
     setAddLine(false);
-    setIsEditing(false);
+     setIsEditing(false);
     setError(false);
   }
 
@@ -213,11 +216,19 @@ const DictionaryEditor = () => {
                 {error}
               </div>
             )}
+            {(isSaving && counter > 0) &&(
+              <div
+                className='bg-[#0069361e] border border-[#006937] text-[#006937] px-4 py-3 rounded relative mb-4 text-right'
+                role='alert'>
+                <span className='block sm:inline ' style={{ direction: "rtl", display: "flex" }}>{`השמירה התבצעה בהצלחה. ${counter} שורות נמחקו/התוספו`}</span>
+              </div>
+            )}
+
 
             <div className="flex gap-4 mb-4">
               <button
                 onClick={addNewLine}
-                disabled={error!=''}
+                disabled={error != ''}
                 // className="px-4 py-2 bg-[#007e41]text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 className='p-2 bg-[#007e41] text-white rounded-md hover:bg-[#007e4191] disabled:opacity-50 '
               >
@@ -237,45 +248,7 @@ const DictionaryEditor = () => {
 
             </div>
 
-            {/* <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                placeholder="תיקון"
-                value={newEntry.Phrase}
-                onChange={(e) => setNewEntry({ ...newEntry, Phrase: e.target.value })}
-                className="flex-1 px-4 py-2 border rounded-md text-right"
-                dir="rtl"
-              />
-              <input
-                type="text"
-                placeholder="נשמע כמו"
-                value={newEntry.SoundsLike}
-                onChange={(e) => setNewEntry({ ...newEntry, SoundsLike: e.target.value })}
-                className="flex-1 px-4 py-2 border rounded-md text-right"
-                dir="rtl"
-              />
-              <input
-                type="text"
-                placeholder="id"
-                value={newEntry.id}
-                onChange={(e) => setNewEntry({ ...newEntry, id: e.target.value })}
-                className="flex-1 px-4 py-2 border rounded-md"
-              />
-              <input
-                type="text"
-                placeholder="להציג בתור"
-                value={newEntry.DisplayAs}
-                onChange={(e) => setNewEntry({ ...newEntry, DisplayAs: e.target.value })}
-                className="flex-1 px-4 py-2 border rounded-md text-right"
-                dir="rtl"
-              />
-              <button
-                onClick={addNewEntry}
-                className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                <PlusIcon />
-              </button>
-            </div> */}
+
 
             <div className="flex-1 overflow-auto">
               <table dir='rtl' className="w-full border-collapse table-auto">
@@ -378,7 +351,7 @@ const DictionaryEditor = () => {
               >
                 <button
                   onClick={saveDictionary}
-                  disabled={error!=''}
+                  disabled={error != ''}
                   className="p-3 bg-[#007e41] text-white rounded-md hover:bg-[#007e4191] disabled:opacity-50 shadow-lg"
                   style={{ marginRight: "auto" }}
 

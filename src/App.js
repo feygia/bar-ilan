@@ -8,6 +8,8 @@ import { uploadFile, TranscribeFile, getFile, cleanTranscribe, summarize } from 
 import LoaderButton from "./components/LoaderButton";
 import Modal from "./components/Modal";
 import iconWand from './assets/magic-wand.png'
+import config from './app.config.json'; 
+
 
 const MedicalTranscription = () => {
   const [audioUrl, setAudioUrl] = useState(null);
@@ -43,53 +45,63 @@ const MedicalTranscription = () => {
 
 
 
-  const BUCKET_NAME = 'testtranscriberapp'
-  const END_DIR_FOLDER = 'ai-summarize/'
-  const TRANSCRIPTION_FOLDER = 'transcriptions/'
-  const CLEANED_FOLDER = 'cleaned/'
-  const MEDIA_LOAD_FOLDER = 'media-loads/'
-  const SUMMARIZE_FOLDER = 'summarize/'
-  const DICTIONARY_FOLDER = 'dictionaries/'
+  // const BUCKET_NAME = 'testtranscriberapp'
+  //const END_DIR_FOLDER = 'ai-summarize/'
+  //const TRANSCRIPTION_FOLDER = 'transcriptions/'
+  //const CLEANED_FOLDER = 'cleaned/'
+  //const MEDIA_LOAD_FOLDER = 'media-loads/'
+  //const SUMMARIZE_FOLDER = 'summarize/'
+ // const DICTIONARY_FOLDER = 'dictionaries/'
 
 
   useEffect(() => {
-   
+
     if (error !== '') {
-      console.log("line - 54");
       setIsLoading(false); // אם יש שגיאה, הפסיקי את הטעינה
     }
   }, [error]);
 
- 
+
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
+  const handleInputClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // מנקה את הערך של ה-input
+    }
+  };
+
   const handleCleanText = async () => {
-    // if (!sessionId) {
-    //   setError('No active session')
-    //   return
-    // }
+
 
     try {
-      // setIsProcessingAI(true)
       setIsLoading(true);
 
       // Create a progress handler
       const handleProgress = progressText => {
         setTranscription(progressText)
       }
-      const cleanText = await cleanTranscribe(BUCKET_NAME, transcription)
+      const cleanText = await cleanTranscribe(config.bucketName, transcription)
       setTranscription(cleanText)
       setIsLoading(false);
 
       //openModal()
     } catch (error) {
       console.error('Error cleaning text:', error)
-      setError('שגיאה בניקוי הטקסט')
-    } finally {
-      // setIsProcessingAI(false)
+      updateError('שגיאה בניקוי הטקסט')
     }
   }
+
+  const updateError = (newValue) => {
+    if (newValue == error && newValue!='') {
+      setError('');
+      setTimeout(() => {
+        setError(newValue);
+      }, 300);
+    }
+    else
+      setError(newValue);
+  };
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -100,31 +112,27 @@ const MedicalTranscription = () => {
   };
 
   const handleAISummary = async () => {
-    // if (!sessionId) {
-    //   setError('No active session')
-    //   return
-    // }
+
 
     try {
-      // setIsProcessingAI(true)
       setIsLoading(true)
       //Create a progress handler
       const handleProgress = progressText => {
         setTranscription(progressText)
       }
       if (transcription === '') {
-        setError('יש לטעון קובץ לסיכום')
+        updateError('יש לטעון קובץ לסיכום')
         return;
       }
       debugger;
-      const response = await summarize(BUCKET_NAME, '', transcription);
+      const response = await summarize(config.bucketName, '', transcription);
       setTranscription(response)
       console.log("line - 116");
       setIsLoading(false);
 
     } catch (error) {
       console.error('Error generating summary:', error)
-      setError('שגיאה ביצירת סיכום')
+      updateError('שגיאה ביצירת סיכום')
     } finally {
       setIsProcessingAI(false)
     }
@@ -188,7 +196,7 @@ const MedicalTranscription = () => {
     }
 
     if (!isSupported) {
-      setError(
+      updateError(
         'Please select a supported audio file (MPEG, MP3, WAV, M4A, WebM, OGG, AAC,TXT)'
       )
       return
@@ -196,7 +204,7 @@ const MedicalTranscription = () => {
 
     setUploadingFile(true)
     setSelectedFileName('');
-    setError('')
+    updateError('')
     if (file.type === 'text/plain') {
 
 
@@ -222,16 +230,16 @@ const MedicalTranscription = () => {
           size: file.size,
           extension: file.name.split('.').pop()
         })
-        // let fileName = MEDIA_LOAD_FOLDER + file.name
-        const fileName = `${MEDIA_LOAD_FOLDER}audio_${file.name}`;
+        // let fileName = config.MediaLoadFolder + file.name
+        const fileName = `${config.MediaLoadFolder}audio_${file.name}`;
         const fileBase64 = await fileToBase64(file) // הפיכת הקובץ ל-Base64
         setAudioUrl(URL.createObjectURL(file));
-        const response = await uploadFile(BUCKET_NAME, fileName, fileBase64)
+        const response = await uploadFile(config.bucketName, fileName, fileBase64)
         if (response) {
-          const res = await TranscribeFile(BUCKET_NAME, '', fileName, language, numSpeakers, TRANSCRIPTION_FOLDER)
+          const res = await TranscribeFile(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
           if (res) {
-            setTranscribeFilePath(TRANSCRIPTION_FOLDER + res + '.json');
-            const response = await getFile(BUCKET_NAME, TRANSCRIPTION_FOLDER + res + '.json')
+            setTranscribeFilePath(config.TranscriptionFolder + res + '.json');
+            const response = await getFile(config.bucketName, config.TranscriptionFolder + res + '.json')
             if (response) {
               setTranscription(response);
               setTranscriptionCopy(response)
@@ -247,13 +255,11 @@ const MedicalTranscription = () => {
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
         }
-        console.log("line - 237");
-
         setIsLoading(false);
 
       } catch (error) {
         console.error('Error handling file:', error)
-        setError('Failed to process file: ' + error.message)
+        updateError('Failed to process file: ' + error.message)
       } finally {
         setUploadingFile(false)
       }
@@ -285,7 +291,7 @@ const MedicalTranscription = () => {
       return true
     } catch (error) {
       console.error('Audio initialization error:', error)
-      setError('Failed to initialize audio: ' + error.message)
+      updateError('Failed to initialize audio: ' + error.message)
       return false
     }
   }, [])
@@ -314,7 +320,7 @@ const MedicalTranscription = () => {
 
   const startRecording = async () => {
     console.log('Starting recording...')
-    setError('')
+    updateError('')
     setIsProcessing(true);
     setSelectedFileName('');
     try {
@@ -351,7 +357,7 @@ const MedicalTranscription = () => {
       setStartTime(Math.floor(new Date().getSeconds()));
     } catch (error) {
       console.error('Recording error:', error)
-      setError('Failed to start recording: ' + error.message); // Show error in console
+      updateError('Failed to start recording: ' + error.message); // Show error in console
     } finally {
       setIsProcessing(false)
     }
@@ -391,15 +397,15 @@ const MedicalTranscription = () => {
         const reader = new FileReader();
         reader.onloadend = async () => {
           const fileBase64 = reader.result.split(',')[1];
-          const fileName = `${MEDIA_LOAD_FOLDER}audio_${sessionId}.webm`;
+          const fileName = `${config.MediaLoadFolder}audio_${sessionId}.webm`;
           try {
-            const response = await uploadFile(BUCKET_NAME, fileName, fileBase64);
+            const response = await uploadFile(config.bucketName, fileName, fileBase64);
             if (response) {
               console.log('File uploaded successfully');
-              const res = await TranscribeFile(BUCKET_NAME, '', fileName, language, numSpeakers, TRANSCRIPTION_FOLDER)
+              const res = await TranscribeFile(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
               if (res) {
-                setTranscribeFilePath(TRANSCRIPTION_FOLDER + res + '.json');
-                const response = await getFile(BUCKET_NAME, TRANSCRIPTION_FOLDER + res + '.json')
+                setTranscribeFilePath(config.TranscriptionFolder + res + '.json');
+                const response = await getFile(config.bucketName, config.TranscriptionFolder + res + '.json')
                 if (response) {
                   setTranscription(response);
                 }
@@ -409,7 +415,7 @@ const MedicalTranscription = () => {
             setIsLoading(false);
           } catch (error) {
             console.error('Error uploading file:', error);
-            setError('Error uploading file: ' + error.message)
+            updateError('Error uploading file: ' + error.message)
             console.log("line - 400");
             setIsLoading(false);
           }
@@ -418,7 +424,7 @@ const MedicalTranscription = () => {
       }
     } catch (error) {
       console.error('Error saving recording:', error);
-      setError('Failed to save recording: ' + error.message);
+      updateError('Failed to save recording: ' + error.message);
 
     } finally {
       if (animationFrameRef.current) {
@@ -544,6 +550,7 @@ const MedicalTranscription = () => {
             <input
               type='file'
               ref={fileInputRef}
+              onClick={handleInputClick}
               onChange={handleFileSelect}
               accept='audio/*,text/plain'
               className='hidden'

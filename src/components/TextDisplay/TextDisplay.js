@@ -15,7 +15,7 @@ const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
   } = useTextDisplay({text, sessionId});
 
   const handleDownload = () => {
-    const blob = new Blob([text], { type: 'text/plain' }); // יצירת קובץ Blob עם תוכן כטקסט
+    const blob = new Blob([currentText], { type: 'text/plain' }); // יצירת קובץ Blob עם תוכן כטקסט
     const url = URL.createObjectURL(blob); // יצירת URL זמני להורדה
 
     // יצירת אלמנט לינק להורדה

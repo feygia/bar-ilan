@@ -1,7 +1,8 @@
 import axios from "axios";
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import config from '../app.config.json'; 
 
-const BASE_URL = 'http://98.80.128.151:8000/api/v1/'
+
+const BASE_URL = config.BaseUrl
 // const BASE_URL='https://98.80.128.151:8443/api/'
 
 export const uploadFile = async (bucketName, fileKey, fileData) => {
@@ -54,7 +55,7 @@ export const getFile = async (bucketName, fileKey) => {
 
 export const TranscribeFile = async (bucketName, fileName, filePath, lang, numSpeakers, endDir) => {
     try {
-        const response = await axios.post(`${BASE_URL}transcribe`, {
+        const response = await axios.post(`${BASE_URL}transcribe-with-dictionary`, {
             bucket_name: bucketName,//שם באקט
             file_key: filePath,//מיקום קובץ המקורי
             number_of_speakers: numSpeakers,
@@ -102,7 +103,6 @@ export const summarize = async (bucketName, fileKey = "", text = "") => {
 };
 
 export const cleanTranscribe = async (bucketName, transcription,fileName="", filePath="") => {
-    await delay(10000);
 
     var url = "";
     try {
