@@ -46,9 +46,10 @@ const SaveIcon = () => (
 );
 
 const DictionaryEditor = () => {
- const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [entries, setEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,8 +66,11 @@ const DictionaryEditor = () => {
 
   const loadDictionary = async () => {
     setIsLoading(true);
-   setIsEditing(true);
+    setIsEditing(true);
     setCounter(0);
+    setIsSuccess(false);
+    setIsSaving(false);
+
     try {
       var resDic = await getDictionary();
       setEntries(resDic);
@@ -84,12 +88,15 @@ const DictionaryEditor = () => {
       var res = await UploadDictionary("testtranscriberapp", entries);
       if (res === true) {
         loadDictionary();
+        setIsSuccess(true);
       }
       //setIsEditing(false);
       setIsSaving(false);
     } catch (error) {
       console.error('Error:', error);
       setError('שגיאה בשמירת המילון');
+      setIsSaving(false);
+
     }
   };
 
@@ -180,7 +187,7 @@ const DictionaryEditor = () => {
   const onCloseModal = async () => {
     setNewEntry({ Phrase: '', SoundsLike: '', id: '', DisplayAs: '' });
     setAddLine(false);
-     setIsEditing(false);
+    setIsEditing(false);
     setError(false);
   }
 
@@ -216,7 +223,7 @@ const DictionaryEditor = () => {
                 {error}
               </div>
             )}
-            {(isSaving && counter > 0) &&(
+            {(isSuccess && counter > 0) && (
               <div
                 className='bg-[#0069361e] border border-[#006937] text-[#006937] px-4 py-3 rounded relative mb-4 text-right'
                 role='alert'>

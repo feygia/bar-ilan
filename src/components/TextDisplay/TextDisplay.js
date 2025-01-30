@@ -1,18 +1,18 @@
 import React from 'react';
-import {useTextDisplay} from "./useTextDisplay";
+import { useTextDisplay } from "./useTextDisplay";
 import { RotateCcw } from "lucide-react";
 
 
-const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
+const TextDisplay = ({ text, sessionId, direction, textCopy }) => {
   const {
-      copied,
-      handleCopy,
-      isLoading,
-      currentText, setCurrentText,
-      textType, setTextType,
-      fetchTextFromS3,
-      error, contentRef
-  } = useTextDisplay({text, sessionId});
+    copied,
+    handleCopy,
+    isLoading,
+    currentText, setCurrentText,
+    textType, setTextType,
+    fetchTextFromS3,
+    error, contentRef
+  } = useTextDisplay({ text, sessionId });
 
   const handleDownload = () => {
     const blob = new Blob([currentText], { type: 'text/plain' }); // יצירת קובץ Blob עם תוכן כטקסט
@@ -48,32 +48,37 @@ const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
               </span>
             ) : (
               <span className="flex items-center gap-1">
-                <img src='/copy.svg' alt='copy' className='w-[15px] mr-2'/>
+                <img src='/copy.svg' alt='copy' className='w-[15px] mr-2' />
                 העתקה
               </span>
             )}
           </button>
 
-          <button 
+          <button
             onClick={() => {
               handleDownload()
             }}
             className={baseClasses}
-            disabled={currentText ===''}
+            disabled={currentText === ''}
           >
+              <span className="flex items-center gap-1">
+            
+            <img src='/download.png' alt='download'  className='w-[15px] mr-2'/>
             הורדה
+            </span>
+
           </button>
-          <button 
+          <button
             onClick={() => {
-            setCurrentText(textCopy)
+              setCurrentText(textCopy)
             }}
             className={baseClasses}
-            disabled={currentText ===''}
+            disabled={currentText === ''}
           >
             שחזור תמלול מקורי
 
           </button>
-{/*
+          {/*
           <button
             onClick={() => {
               if (textType === 'summary') {
@@ -94,10 +99,10 @@ const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
       <div className="group relative h-[45vh] w-full overflow-hidden" style={{ resize: 'vertical' }}>
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-20">
-              <img src='/loader.gif' alt='loader' className='w-32'/>
+            <img src='/loader.gif' alt='loader' className='w-32' />
           </div>
         )}
-        
+
         {error && (
           <div className="absolute top-14 left-2 right-2 text-red-500 text-center bg-red-100 p-2 z-20 rounded-lg">
             {error}
@@ -116,7 +121,7 @@ const TextDisplay = ({ text, sessionId, direction ,textCopy}) => {
         />
 
         <div className="absolute bottom-2 right-2 w-6 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <img src='scale.svg' alt='↘️'/>
+          <img src='scale.svg' alt='↘️' />
         </div>
       </div>
     </div>

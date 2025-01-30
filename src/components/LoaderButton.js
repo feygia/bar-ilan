@@ -25,7 +25,7 @@ const LoaderButton = ({ isLoading, withIndicatorTime = true, isFromError = false
             return prev;
           }
         });
-      }, 500); // עדכון כל חצי שנייה
+      }, 2500); // עדכון כל חצי שנייה
     } else {
       // כאשר ה- isLoading משתנה ל- false, מכניסים 100%
       setProgress(100);

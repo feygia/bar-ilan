@@ -9,6 +9,7 @@ import LoaderButton from "./components/LoaderButton";
 import Modal from "./components/Modal";
 import iconWand from './assets/magic-wand.png'
 import config from './app.config.json'; 
+import { RotateCcw } from "lucide-react";
 
 
 const MedicalTranscription = () => {
@@ -162,6 +163,8 @@ const MedicalTranscription = () => {
   const handleFileSelect = async event => {
     setIsLoading(true);
     setTranscription('');
+    setAudioUrl(null);
+
     const file = event.target.files[0]
     if (!file) return
 
@@ -504,7 +507,8 @@ const MedicalTranscription = () => {
         <div className='grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#0069361e] rounded-lg mb-2'>
           <button onClick={clearTranscription} className='btn-primary'>
             <span className='ml-6'>רענון מסך</span>
-            {/* <img src='/new.svg' alt='➕' /> */}
+            <RotateCcw size={20} /> {/* אייקון מסתובב */}
+
           </button>
           <button
             onClick={stopRecording}

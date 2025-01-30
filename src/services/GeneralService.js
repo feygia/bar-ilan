@@ -55,7 +55,7 @@ export const getFile = async (bucketName, fileKey) => {
 
 export const TranscribeFile = async (bucketName, fileName, filePath, lang, numSpeakers, endDir) => {
     try {
-        const response = await axios.post(`${BASE_URL}transcribe-with-dictionary`, {
+        const response = await axios.post(`${BASE_URL}transcribe`, {
             bucket_name: bucketName,//שם באקט
             file_key: filePath,//מיקום קובץ המקורי
             number_of_speakers: numSpeakers,
