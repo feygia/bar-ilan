@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-const LoaderButton = ({ isLoading, withIndicatorTime = true, isFromError = false }) => {
+const LoaderButton = ({ isLoading, withIndicatorTime = false, isFromError = false }) => {
   const [progress, setProgress] = useState(0); // אחוז התקדמות
   const [isVisible, setIsVisible] = useState(false); // למעקב אחר האם להציג את הקומפוננטה
 

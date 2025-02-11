@@ -4,12 +4,12 @@ import AudioPlayer from './services/AudioPlayer'
 import DictionaryEditor from './services/DictionaryEditor'
 import TextDisplay from './components/TextDisplay/TextDisplay'
 import TranscriptionConfig from './components/TranscriptionConfig'
-import { uploadFile, TranscribeFile, getFile, cleanTranscribe, summarize } from './services/GeneralService'
+import { uploadFile, TranscribeFileAsync, getFile, cleanTranscribeAsync, summarizeAsync } from './services/GeneralService'
 import LoaderButton from "./components/LoaderButton";
-import Modal from "./components/Modal";
 import iconWand from './assets/magic-wand.png'
-import config from './app.config.json'; 
+import config from './app.config.json';
 import { RotateCcw } from "lucide-react";
+import { useMsal } from '@azure/msal-react';
 
 
 const MedicalTranscription = () => {
@@ -37,34 +37,129 @@ const MedicalTranscription = () => {
   const gainNodeRef = useRef(null)
   const analyserRef = useRef(null)
   const animationFrameRef = useRef(null)
-
   const [isProcessingAI, setIsProcessingAI] = useState(false)
-
   const [numSpeakers, setNumSpeakers] = useState(2)
   const [language, setLanguage] = useState('he-IL')
   const [isLoading, setIsLoading] = useState(false);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
+  const { instance } = useMsal();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState([]);
+  const [userToken, setUserToken] = useState([]);
+  //const [groupNames, setGroupNames] = useState([]);
 
+  const loginRequest = { scopes: ["openid", "profile", "email", "User.Read", "api://saml_barilan/user_impersonation/TokenSign/user_impersonation"] };
 
-  // const BUCKET_NAME = 'testtranscriberapp'
-  //const END_DIR_FOLDER = 'ai-summarize/'
-  //const TRANSCRIPTION_FOLDER = 'transcriptions/'
-  //const CLEANED_FOLDER = 'cleaned/'
-  //const MEDIA_LOAD_FOLDER = 'media-loads/'
-  //const SUMMARIZE_FOLDER = 'summarize/'
- // const DICTIONARY_FOLDER = 'dictionaries/'
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!instance) {
+        console.warn("App.js: MSAL instance is not initialized.");
+        return;
+      }
+
+      try {
+        const allAccounts = instance.getAllAccounts();
+        if (!allAccounts.length) {
+          console.warn("App.js: No accounts found.");
+          setIsLoading(false);
+          return;
+        }
+
+        const account = instance.getActiveAccount() || allAccounts[0];
+        instance.setActiveAccount(account);
+        if (!account) {
+          console.warn("App.js: No active account set.");
+          setIsLoading(false);
+          return;
+        } else {
+          setIsAuthenticated(true);
+        }
+
+        setUserName(account.name || account.username);
+        const email = account.username.split('@')[0];
+
+        try {
+          const tokenResponse = await instance.acquireTokenSilent({
+            scopes: ["openid", "profile", "email", "User.Read", "api://saml_barilan/user_impersonation/TokenSign/user_impersonation"]
+          });
+          const token = tokenResponse.accessToken;
+          //const apiUrl = process.env.REACT_APP_API_GETAWAY_URL;
+          // const groups = await fetchGroupNames(apiUrl, token, email);
+          setIsLoading(true);
+
+          //setGroupNames(groups);
+          setUserRole(email);
+          setUserToken(token);
+        } catch (tokenError) {
+          console.error("App.js: Token acquisition error:", tokenError);
+          setIsLoading(false);
+        }
+
+      } catch (sessionError) {
+        console.error("App.js: Error during session check:", sessionError);
+        setIsLoading(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+  }, [instance]);
 
 
   useEffect(() => {
-
     if (error !== '') {
       setIsLoading(false); // אם יש שגיאה, הפסיקי את הטעינה
     }
   }, [error]);
 
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  const handleLogin = async () => {
+    try {
+      const loginResponse = await instance.loginPopup(loginRequest);
+      // console.log("App.js: Login successful:", loginResponse);
+
+      instance.setActiveAccount(loginResponse.account);
+      setIsAuthenticated(true);
+
+      const email = loginResponse.account.username.split('@')[0];
+      setUserName(loginResponse.account.name || loginResponse.account.username);
+
+      const token = (await instance.acquireTokenSilent({ scopes: ["openid", "profile", "email", "User.Read", "api://saml_barilan/user_impersonation/TokenSign/user_impersonation"] })).accessToken;
+      const apiUrl = config.BaseUrl
+      // console.log("App.js: API Gateway URL:", apiUrl);
+      
+      //const groups = await fetchGroupNames(apiUrl, token, email);
+
+      // console.log("App.js: Groups fetched post-login:", groups);
+      //setGroupNames(groups);
+      setUserRole(email);
+    } catch (error) {
+      console.error("App.js: Login error:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await instance.logoutPopup({
+        postLogoutRedirectUri: window.location.origin,
+        account: instance.getActiveAccount()
+      });
+      setIsAuthenticated(false);
+      setUserName('');
+      setUserRole([]);
+      //  setGroupNames([]);
+
+      localStorage.clear();
+      sessionStorage.clear();
+
+    } catch (error) {
+      console.error("App.js: Logout error:", error);
+    }
+  };
 
   const handleInputClick = () => {
     if (fileInputRef.current) {
@@ -77,12 +172,13 @@ const MedicalTranscription = () => {
 
     try {
       setIsLoading(true);
+      setError('');
 
       // Create a progress handler
       const handleProgress = progressText => {
         setTranscription(progressText)
       }
-      const cleanText = await cleanTranscribe(config.bucketName, transcription)
+      const cleanText = await cleanTranscribeAsync(config.bucketName, transcription)
       setTranscription(cleanText)
       setIsLoading(false);
 
@@ -93,30 +189,11 @@ const MedicalTranscription = () => {
     }
   }
 
-  const updateError = (newValue) => {
-    if (newValue == error && newValue!='') {
-      setError('');
-      setTimeout(() => {
-        setError(newValue);
-      }, 300);
-    }
-    else
-      setError(newValue);
-  };
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file); // קריאת הקובץ
-      reader.onload = () => resolve(reader.result.split(',')[1]); // מחרוזת Base64 (ללא header)
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleAISummary = async () => {
 
-
     try {
-      setIsLoading(true)
+      setIsLoading(true);
+      setError('');
       //Create a progress handler
       const handleProgress = progressText => {
         setTranscription(progressText)
@@ -126,9 +203,8 @@ const MedicalTranscription = () => {
         return;
       }
       debugger;
-      const response = await summarize(config.bucketName, '', transcription);
+      const response = await summarizeAsync(config.bucketName, '', transcription);
       setTranscription(response)
-      console.log("line - 116");
       setIsLoading(false);
 
     } catch (error) {
@@ -138,28 +214,7 @@ const MedicalTranscription = () => {
       setIsProcessingAI(false)
     }
   }
-  const setContentFile = async (file) => {
-    try {
 
-      if (file) {
-        const reader = new FileReader();
-        // פונקציה שתרוץ כשהקריאה של הקובץ הושלמה
-        reader.onload = () => {
-          // setFileContent(reader.result); // גישה לתוכן הקובץ
-          setTranscription(reader.result); // גישה לתוכן הקובץ
-          setTranscriptionCopy(reader.result);
-        };
-        // קריאה של תוכן הקובץ כטקסט
-        reader.readAsText(file)
-        // אפשר לשלוח את האובייקט `file` למקום אחר
-      } else {
-        console.log('No file selected');
-      }
-    }
-    catch (error) {
-
-    }
-  };
   const handleFileSelect = async event => {
     setIsLoading(true);
     setTranscription('');
@@ -187,17 +242,13 @@ const MedicalTranscription = () => {
       'text/plain'
     ]
 
-    // Check if file type is directly supported
     let isSupported = supportedAudioTypes.includes(file.type)
-
-    // If not directly supported, check file extension for .mpeg files
     if (!isSupported && file.name) {
       const extension = file.name.toLowerCase().split('.').pop()
       if (extension === 'mpeg') {
         isSupported = true
       }
     }
-
     if (!isSupported) {
       updateError(
         'Please select a supported audio file (MPEG, MP3, WAV, M4A, WebM, OGG, AAC,TXT)'
@@ -209,23 +260,15 @@ const MedicalTranscription = () => {
     setSelectedFileName('');
     updateError('')
     if (file.type === 'text/plain') {
-
-
       await setContentFile(file)
-      console.log("line - 192");
       setIsLoading(false);
       setUploadingFile(false)
-
-
     }
     else {
-
       try {
         const newSessionId = createSessionId()
         setSessionId(newSessionId)
         setAudioUrl(null);
-
-
         // Log file information for debugging
         console.log('Uploading file:', {
           name: file.name,
@@ -239,7 +282,7 @@ const MedicalTranscription = () => {
         setAudioUrl(URL.createObjectURL(file));
         const response = await uploadFile(config.bucketName, fileName, fileBase64)
         if (response) {
-          const res = await TranscribeFile(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
+          const res = await TranscribeFileAsync(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
           if (res) {
             setTranscribeFilePath(config.TranscriptionFolder + res + '.json');
             const response = await getFile(config.bucketName, config.TranscriptionFolder + res + '.json')
@@ -268,6 +311,49 @@ const MedicalTranscription = () => {
       }
     }
   }
+
+  const updateError = (newValue) => {
+    if (newValue == error && newValue != '') {
+      setError('');
+      setTimeout(() => {
+        setError(newValue);
+      }, 300);
+    }
+    else
+      setError(newValue);
+  };
+
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file); // קריאת הקובץ
+      reader.onload = () => resolve(reader.result.split(',')[1]); // מחרוזת Base64 (ללא header)
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const setContentFile = async (file) => {
+    try {
+
+      if (file) {
+        const reader = new FileReader();
+        // פונקציה שתרוץ כשהקריאה של הקובץ הושלמה
+        reader.onload = () => {
+          // setFileContent(reader.result); // גישה לתוכן הקובץ
+          setTranscription(reader.result); // גישה לתוכן הקובץ
+          setTranscriptionCopy(reader.result);
+        };
+        // קריאה של תוכן הקובץ כטקסט
+        reader.readAsText(file)
+        // אפשר לשלוח את האובייקט `file` למקום אחר
+      } else {
+        console.log('No file selected');
+      }
+    }
+    catch (error) {
+
+    }
+  };
 
   const initializeAudioContext = useCallback(async () => {
     try {
@@ -405,7 +491,7 @@ const MedicalTranscription = () => {
             const response = await uploadFile(config.bucketName, fileName, fileBase64);
             if (response) {
               console.log('File uploaded successfully');
-              const res = await TranscribeFile(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
+              const res = await TranscribeFileAsync(config.bucketName, '', fileName, language, numSpeakers, config.TranscriptionFolder)
               if (res) {
                 setTranscribeFilePath(config.TranscriptionFolder + res + '.json');
                 const response = await getFile(config.bucketName, config.TranscriptionFolder + res + '.json')
@@ -414,12 +500,11 @@ const MedicalTranscription = () => {
                 }
               }
             }
-            console.log("line - 395");
             setIsLoading(false);
           } catch (error) {
             console.error('Error uploading file:', error);
             updateError('Error uploading file: ' + error.message)
-            console.log("line - 400");
+
             setIsLoading(false);
           }
         };

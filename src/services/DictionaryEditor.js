@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { getDictionary, UploadDictionary } from "./GeneralService"
+import { getDictionary, UploadDictionaryAsync } from "./GeneralService"
 
 const LoadingSpinner = () => (
   <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -85,7 +85,7 @@ const DictionaryEditor = () => {
     setIsSaving(true);
     try {
 
-      var res = await UploadDictionary("testtranscriberapp", entries);
+      var res = await UploadDictionaryAsync("testtranscriberapp", entries);
       if (res === true) {
         loadDictionary();
         setIsSuccess(true);
@@ -106,7 +106,6 @@ const DictionaryEditor = () => {
 
     if (originalIndex !== -1) {
       try {
-        console.log('Deleting entry:', entryToDelete);
         const newEntries = [...entries];
         newEntries.splice(originalIndex, 1); // מחיקת הפריט לפי האינדקס המקורי
         setEntries(newEntries);

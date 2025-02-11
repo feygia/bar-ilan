@@ -5,6 +5,51 @@ import config from '../app.config.json';
 const BASE_URL = config.BaseUrl
 // const BASE_URL='https://98.80.128.151:8443/api/'
 
+const GetStatusTask = async (taskId,timeDelay=1000) => {
+    while (true) {
+        try {
+            const response = await axios.post(`${BASE_URL}task/status`, {
+                task_id: taskId
+            }, { headers: { 'Content-Type': 'application/json' } });
+
+            if (response && response.data) {
+                if (response.data.status === "completed") {
+                    return response.data.response.data;
+                } else if (response.data.status !== "in_progress") {
+                    throw response.data;
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, timeDelay));
+        } catch (error) {
+            console.error('Error fetching task status:', error.message);
+            throw error;
+        }
+    }
+};
+const GetStatusTaskTrans = async (taskId,timeDelay=1000) => {
+    while (true) {
+        try {
+            const response = await axios.post(`${BASE_URL}transcription/status`, {
+                task_id: taskId
+            }, { headers: { 'Content-Type': 'application/json' } });
+
+            if (response && response.data) {
+                if (response.data.status === "completed") {
+                    return response.data.response.data;
+                } else if (response.data.status !== "in_progress") {
+                    throw response.data;
+                }
+            }
+
+            await new Promise(resolve => setTimeout(resolve, timeDelay));
+        } catch (error) {
+            console.error('Error fetching task status:', error.message);
+            throw error;
+        }
+    }
+};
+
 export const uploadFile = async (bucketName, fileKey, fileData) => {
     try {
         const response = await axios.post(`${BASE_URL}s3/upload`, {
@@ -39,16 +84,14 @@ export const getFile = async (bucketName, fileKey) => {
                 const jsonData = response.data.file_content;
                 const jsonObject = JSON.parse(jsonData); // המרה ל-Object
                 const content = jsonObject.results.formatted_text;
-                console.log('File fetched successfully:', response.data);
                 return content; // data.file_content יכיל את תוכן הקובץ במידת הצורך
             }
             if (response.data.status === "error") {
-                console.error(`Error fetching file: ${response.data.status} - ${response.data.message}`);
-                throw new Error(`Fetch failed: ${response.data.status}`);
+                throw new Error(`get file failed: ${response.data.status}`);
             }
         }
     } catch (error) {
-        console.error('Error fetching file:', error.message);
+        console.error('Error get file:', error.message);
         throw error;
     }
 };
@@ -66,16 +109,14 @@ export const TranscribeFile = async (bucketName, fileName, filePath, lang, numSp
 
         if (response && response.data) {
             if (response.data.status === "success") {
-                console.log('File fetched successfully:', response.data);
                 return response.data.job_name; // data.file_content יכיל את תוכן הקובץ במידת הצורך
             }
             if (response.data.status === "error") {
-                console.error(`Error fetching file: ${response.data.status} `);
-                throw new Error(`Fetch failed: ${response.data.status}`);
+                throw new Error(`TranscribeFile failed: ${response.data.status}`);
             }
         }
     } catch (error) {
-        console.error('Error fetching file:', error.message);
+        console.error('Error TranscribeFile file:', error.message);
         throw error;
     }
 };
@@ -92,7 +133,6 @@ export const summarize = async (bucketName, fileKey = "", text = "") => {
                 return response.data.summarized_text;
             }
             if (response.data.status === "error") {
-                console.error(`Error summarize file: ${response.data.status} `);
                 throw new Error(`summarize failed: ${response.data.status}`);
             }
         }
@@ -118,7 +158,6 @@ export const cleanTranscribe = async (bucketName, transcription,fileName="", fil
                 return response.data.clean_text;
             }
             if (response.data.status === "error") {
-                console.error(`Error summarize file: ${response.data.status} `);
                 throw new Error(`summarize failed: ${response.data.status}`);
             }
         }
@@ -138,12 +177,11 @@ export const getDictionary = async () => {
                 return response.data.dictionary_content;
             }
             if (response.data.status === "error") {
-                console.error(`Error summarize file: ${response.data.status} `);
-                throw new Error(`summarize failed: ${response.data.status}`);
+                throw new Error(`getDictionary failed: ${response.data.status}`);
             }
         }
     } catch (error) {
-        console.error('Error summarize file:', error.message);
+        console.error('Error getDictionary :', error.message);
         throw error;
     }
 };
@@ -160,12 +198,108 @@ export const UploadDictionary = async (bucketName, dicArray) => {
                 return true;
             }
             if (response.data.status === "error") {
-                console.error(`Error UploadDictionary: ${response.data.status} `);
                 throw new Error(`Update Dic failed: ${response.data.status}`);
             }
         }
     } catch (error) {
         console.error('Error update dic:', error.message);
+        throw error;
+    }
+};
+
+export const summarizeAsync = async (bucketName, fileKey = "", text = "") => {
+    try {
+        const response = await axios.post(`${BASE_URL}summarize-as`, {
+            bucket_name: bucketName,
+            file_key: fileKey,
+            text: text
+        }, { headers: { 'Content-Type': 'application/json' } });
+
+        if (response && response.data) {
+            if (response.data.status === "in_progress") {
+              {  
+                //return response.data.summarized_text;
+               const res= await GetStatusTask(response.data.task_id,1000)
+               return res.summarized_text
+              }
+            }
+            if (response.data.status === "failed") {
+                throw new Error(`summarize failed: ${response.data.status}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error summarize file:', error.message);
+        throw error;
+    }
+};
+
+export const cleanTranscribeAsync = async (bucketName, transcription,fileName="", filePath="") => {
+
+    var url = "";
+    try {
+        const response = await axios.post(`${BASE_URL}clean-transcription-as`, {
+            bucket_name: bucketName,
+            transcription:transcription,
+            file_name:''
+        }, { headers: { 'Content-Type': 'application/json' } });
+        if (response && response.data) {
+            if (response.data.status === "in_progress") {
+                const res=await GetStatusTask(response.data.task_id)
+                return res.clean_text;
+            }
+            if (response.data.status === "failed") {
+                throw new Error(`summarize failed: ${response.data.status}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error summarize file:', error.message);
+        throw error;
+    }
+};
+
+export const UploadDictionaryAsync = async (bucketName, dicArray) => {
+    try {
+        const response = await axios.post(`${BASE_URL}upload-dictionary-as`, {
+            bucket_name: bucketName,
+            dictionary_content: dicArray
+        }, { headers: { 'Content-Type': 'application/json' } });
+
+        if (response && response.data) {
+            if (response.data.status === "in_progress") {
+                const res=await GetStatusTask(response.data.task_id)
+                return true;
+            }
+            if (response.data.status === "failed") {
+                throw new Error(`Update Dic failed: ${response.data.status}`);
+            }
+        }
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const TranscribeFileAsync = async (bucketName, fileName, filePath, lang, numSpeakers, endDir) => {
+    try {
+        const response = await axios.post(`${BASE_URL}transcribe-as`, {
+            bucket_name: bucketName,//שם באקט
+            file_key: filePath,//מיקום קובץ המקורי
+            number_of_speakers: numSpeakers,
+            language_code: lang,
+            end_dir: endDir,//תקיה שבה ישב הקובץ המתומלל
+            file_name: fileName,//שם קובץ המקורי
+        }, { headers: { 'Content-Type': 'application/json' } });
+
+        if (response && response.data) {
+            if (response.data.status === "in_progress") {
+                const res =await GetStatusTaskTrans(response.data.task_id,5000)
+                return res.job_name
+            }
+            if (response.data.status === "faild") {
+                throw new Error(`Fetch TranscribeFile: ${response.data.status}`);
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching file:', error.message);
         throw error;
     }
 };
